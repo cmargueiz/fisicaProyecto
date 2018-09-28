@@ -3,19 +3,44 @@
 #include <DHT.h>
 #include <SPI.h>
 #include <SD.h>
+#include <Wire.h>
+#include "RTClib.h"
+
+// RTC_DS1307 rtc;
+RTC_DS3231 rtc;
+
+
+
+// Definimos el pin digital donde se conecta el sensor
+#define DHTPIN 2
+// Dependiendo del tipo de sensor
+#define DHTTYPE DHT11
+
+// Inicializamos el sensor DHT11
+DHT dht(DHTPIN, DHTTYPE);
 
 const int chipSelect = 4;
 void setup()
 {
 
-  // Cambiamos referencia de las entradas analógicas
-  analogReference(INTERNAL);
-
-  // Configuramos el puerto serial a 9600 bps
+ // Configuramos el puerto serial a 9600 bps
   Serial.begin(9600);
+  if (!rtc.begin()) {
+    Serial.println(F("Couldn't find RTC"));
+    while (1);
+  }
 
-  //Incializa libreria y configuraciones de red
-  Ethernet.begin(mac, ip);
+  // Si se ha perdido la corriente, fijar fecha y hora
+  if (rtc.lostPower()) {
+    // Fijar a fecha y hora de compilacion
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+
+    // Fijar a fecha y hora específica. En el ejemplo, 21 de Enero de 2016 a las 03:00:00
+    // rtc.adjust(DateTime(2016, 1, 21, 3, 0, 0));
+  }
+
+
+
 
   // Comenzamos el sensor DHT
   dht.begin();
@@ -28,7 +53,7 @@ void setup()
 }
 
 void loop() {
-   //LEYENDO TEMPERATURAS---------------------------
+  //LEYENDO TEMPERATURAS---------------------------
 
   // Con analogRead leemos el sensor, recuerda que es un valor de 0 a 1023
   tempC = analogRead(pinLM35);
@@ -43,7 +68,7 @@ void loop() {
   tempC_2 = (tempC_2 * 100.0) / 1024.0;
 
 
-  
+
   // Leemos la humedad relativa
   float humedad = dht.readHumidity();
   // Leemos la temperatura en grados centígrados (por defecto)
@@ -54,14 +79,26 @@ void loop() {
     return;
     }*/
 
-    
+
+  // Obtener fecha actual y mostrar por Serial
+  DateTime date = rtc.now();
+
+  int anio = date.year();
+  int mes = date.month();
+  int dia = date.day();
+  int hora = date.hour();
+  int minu = date.minute();
+
+  Serial.println(anio, DEC);
+
+
   Serial.println(tempC);
   Serial.println(tempC_2);
   Serial.println(tempC_3);
   Serial.println(humedad);
 
 
-   //Escritura del archivo
+  //Escritura del archivo
 
   if (tempC != 0 && tempC_2 != 0 ) {
     File datosTemp1 = SD.open("sensor1.txt", FILE_WRITE);
